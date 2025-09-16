@@ -1,0 +1,7 @@
+/cmake-build-*/
+/Toolchains/
+~$*
+~*.tmp
+.~lock*
+*.drawio.bkp
+*.state.json
