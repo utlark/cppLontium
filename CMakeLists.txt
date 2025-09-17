@@ -19,7 +19,14 @@ if (TRUE)
     set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
 endif ()
 
-add_executable(cppLontium main.cpp)
+add_executable(cppLontium main.cpp Config.h
+        I2cDevice.cpp
+        I2cDevice.h
+        LontiumDevice.cpp
+        LontiumDevice.h
+        GpioDevice.cpp
+        GpioDevice.h
+)
 
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     target_compile_options(cppLontium PRIVATE -O0 -g)
@@ -30,6 +37,6 @@ else ()
     target_link_options(cppLontium PRIVATE -Os -Wl,--strip-all)
 endif ()
 
-if (TRUE)
+if (FALSE)
     target_link_options(cppLontium PRIVATE -static -static-libgcc -static-libstdc++)
 endif ()
