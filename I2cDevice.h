@@ -25,6 +25,6 @@ public:
     [[nodiscard]] std::vector<uint8_t> readRegs(uint8_t reg, size_t len) const;
 
 private:
-    int fd;
-    int addr;
+    int _fd;
+    int _addr;
 };

@@ -19,14 +19,17 @@ if (TRUE)
     set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
 endif ()
 
-add_executable(cppLontium main.cpp Config.h
-        I2cDevice.cpp
-        I2cDevice.h
-        LontiumDevice.cpp
-        LontiumDevice.h
+add_executable(cppLontium main.cpp cxxopts.hpp
         GpioDevice.cpp
         GpioDevice.h
+        I2cDevice.cpp
+        I2cDevice.h
+        LontiumConfig.h
+        LontiumDevice.cpp
+        LontiumDevice.h
 )
+
+set_target_properties(cppLontium PROPERTIES RUNTIME_OUTPUT_NAME lontium-config)
 
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     target_compile_options(cppLontium PRIVATE -O0 -g)

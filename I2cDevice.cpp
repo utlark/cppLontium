@@ -1,20 +1,20 @@
 #include "I2cDevice.h"
 
-I2cDevice::I2cDevice(const std::string &device, int addr) : fd(-1), addr(addr) {
-    fd = open(device.c_str(), O_RDWR);
-    if (fd < 0)
+I2cDevice::I2cDevice(const std::string &device, int addr) : _fd(-1), _addr(addr) {
+    _fd = open(device.c_str(), O_RDWR);
+    if (_fd < 0)
         throw std::runtime_error("Failed to open I2C device: " + device);
 
-    if (ioctl(fd, I2C_SLAVE, addr) < 0) {
-        close(fd);
+    if (ioctl(_fd, I2C_SLAVE, addr) < 0) {
+        close(_fd);
         throw std::runtime_error("Failed to set I2C slave address");
     }
 }
 
 I2cDevice::~I2cDevice() {
     try {
-        if (fd >= 0)
-            close(fd);
+        if (_fd >= 0)
+            close(_fd);
     } catch (...) {
     }
 }
@@ -37,7 +37,7 @@ void I2cDevice::writeRegs(uint8_t reg, const std::vector<uint8_t> &values) const
     struct i2c_rdwr_ioctl_data packets{};
     struct i2c_msg message{};
 
-    message.addr = addr;
+    message.addr = _addr;
     message.flags = 0;
     message.len = buf.size();
     message.buf = buf.data();
@@ -45,7 +45,7 @@ void I2cDevice::writeRegs(uint8_t reg, const std::vector<uint8_t> &values) const
     packets.msgs = &message;
     packets.nmsgs = 1;
 
-    if (ioctl(fd, I2C_RDWR, &packets) < 0)
+    if (ioctl(_fd, I2C_RDWR, &packets) < 0)
         throw std::runtime_error("Failed to write registers");
 }
 
@@ -53,13 +53,13 @@ std::vector<uint8_t> I2cDevice::readRegs(uint8_t reg, size_t len) const {
     struct i2c_rdwr_ioctl_data packets{};
     struct i2c_msg messages[2];
 
-    messages[0].addr = addr;
+    messages[0].addr = _addr;
     messages[0].flags = 0;
     messages[0].len = 1;
     messages[0].buf = &reg;
 
     std::vector<uint8_t> buf(len);
-    messages[1].addr = addr;
+    messages[1].addr = _addr;
     messages[1].flags = I2C_M_RD;
     messages[1].len = len;
     messages[1].buf = buf.data();
@@ -67,7 +67,7 @@ std::vector<uint8_t> I2cDevice::readRegs(uint8_t reg, size_t len) const {
     packets.msgs = messages;
     packets.nmsgs = 2;
 
-    if (ioctl(fd, I2C_RDWR, &packets) < 0)
+    if (ioctl(_fd, I2C_RDWR, &packets) < 0)
         throw std::runtime_error("Failed to read multiple registers");
 
     return buf;

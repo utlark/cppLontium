@@ -1,6 +1,6 @@
 #include "LontiumDevice.h"
 
-LontiumDevice::LontiumDevice(const std::string &device, uint8_t addr) : _i2c(device, addr) {}
+LontiumDevice::LontiumDevice(const std::string &device, LontiumConfig &config, uint8_t addr) : _i2c(device, addr), _config(config) {}
 
 void LontiumDevice::selectBank(uint8_t bank) {
     _i2c.writeReg(0xFF, bank);
@@ -74,8 +74,9 @@ void LontiumDevice::lvdsInit() {
         std::this_thread::sleep_for(std::chrono::milliseconds(50));
 
     selectBank(0x60);
-    _i2c.writeReg(0x59, LVDS_Map + LVDS_Output_En + LVDS_SyncMode + LVDS_ColorDepth + LVDS_C_D_Port_Swap + LVDS_R_B_Color_Swap);
-    if (LVDS_ColorDepth == ColorDepth_8_bit)
+    _i2c.writeReg(0x59, static_cast<uint8_t>(_config.lvdsMap) | static_cast<uint8_t>(_config.lvdsOutput) | static_cast<uint8_t>(_config.syncMode) |
+                        static_cast<uint8_t>(_config.colorDepth) | static_cast<uint8_t>(_config.cDPortSwap) | static_cast<uint8_t>(_config.rBColorSwap));
+    if (_config.colorDepth == ColorDepth::Bit_8)
         _i2c.writeReg(0x5f, 0x00);
     else
         _i2c.writeReg(0x5f, 0x38);
@@ -83,7 +84,7 @@ void LontiumDevice::lvdsInit() {
     _i2c.writeReg(0xa8, 0x07);
     _i2c.writeReg(0x04, 0xf2);
     _i2c.writeReg(0xa0, 0x58);
-    _i2c.writeReg(0xa4, LVDS_Port);
+    _i2c.writeReg(0xa4, static_cast<uint8_t>(_config.channelWidth));
     _i2c.writeReg(0xa8, 0x00);
     _i2c.writeReg(0xb0, 0x66);
     _i2c.writeReg(0xb1, 0x66);
@@ -102,7 +103,7 @@ void LontiumDevice::lvdsInit() {
     _i2c.writeReg(0xbf, 0x41);
     _i2c.writeReg(0xa1, 0xb0);
     _i2c.writeReg(0xa2, 0x10);
-    _i2c.writeReg(0x5c, LVDS_Port);
+    _i2c.writeReg(0x5c, static_cast<uint8_t>(_config.channelWidth));
     _i2c.writeReg(0xba, 0x18);
     _i2c.writeReg(0xc0, 0x18);
     _i2c.writeReg(0x04, 0xe7);
@@ -159,7 +160,7 @@ void LontiumDevice::colorConfig() {
             _i2c.writeReg(0x52, 0x00); // YUV422 to YUV444 disable
         }
 
-        _i2c.writeReg(0x53, 0x40 + CP_Convert_Mode);
+        _i2c.writeReg(0x53, 0x40 | static_cast<uint8_t>(_config.cpConvertMode));
     } else {
         selectBank(0x60);
         _i2c.writeReg(0x07, 0x80);
