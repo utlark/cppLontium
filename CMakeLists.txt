@@ -1,5 +1,9 @@
 cmake_minimum_required(VERSION 4.0)
-project(cppLontium)
+
+set(TARGET_NAME cppLontium)
+set(OUTPUT_NAME lontium-config)
+
+project(${TARGET_NAME})
 
 set(CMAKE_CXX_STANDARD 17)
 
@@ -19,7 +23,7 @@ if (TRUE)
     set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
 endif ()
 
-add_executable(cppLontium main.cpp cxxopts.hpp
+add_executable(${TARGET_NAME} main.cpp cxxopts.hpp
         GpioDevice.cpp
         GpioDevice.h
         I2cDevice.cpp
@@ -29,17 +33,17 @@ add_executable(cppLontium main.cpp cxxopts.hpp
         LontiumDevice.h
 )
 
-set_target_properties(cppLontium PROPERTIES RUNTIME_OUTPUT_NAME lontium-config)
+set_target_properties(${TARGET_NAME} PROPERTIES RUNTIME_OUTPUT_NAME ${OUTPUT_NAME})
 
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
-    target_compile_options(cppLontium PRIVATE -O0 -g)
-    target_link_options(cppLontium PRIVATE -O0 -g)
-    target_compile_definitions(cppLontium PRIVATE DEBUG)
+    target_compile_options(${TARGET_NAME} PRIVATE -O0 -g)
+    target_link_options(${TARGET_NAME} PRIVATE -O0 -g)
+    target_compile_definitions(${TARGET_NAME} PRIVATE DEBUG)
 else ()
-    target_compile_options(cppLontium PRIVATE -Os)
-    target_link_options(cppLontium PRIVATE -Os -Wl,--strip-all)
+    target_compile_options(${TARGET_NAME} PRIVATE -Os)
+    target_link_options(${TARGET_NAME} PRIVATE -Os -Wl,--strip-all)
 endif ()
 
 if (FALSE)
-    target_link_options(cppLontium PRIVATE -static -static-libgcc -static-libstdc++)
+    target_link_options(${TARGET_NAME} PRIVATE -static -static-libgcc -static-libstdc++)
 endif ()
