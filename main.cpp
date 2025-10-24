@@ -1,17 +1,10 @@
 #include <iostream>
-#include <thread>
-#include <chrono>
-#include <map>
-#include <vector>
-#include <string>
-#include <stdexcept>
-#include <algorithm>
-
-#include "cxxopts.hpp"
 
 #include "GpioDevice.h"
 #include "LontiumConfig.h"
 #include "LontiumDevice.h"
+
+#include "cxxopts.hpp"
 
 struct AppConfig {
     int resetPin = 154;
@@ -60,7 +53,7 @@ const std::map<std::string, std::vector<uint8_t>> edidMap = {
                       }}
 };
 
-AppConfig parseArgs(int argc, char **argv) {
+AppConfig ParseArgs(int argc, char **argv) {
     cxxopts::Options options("lontium-config", "Lontium configurator utility\n");
 
     options.add_options()
@@ -152,24 +145,24 @@ AppConfig parseArgs(int argc, char **argv) {
     return appConfig;
 }
 
-void initLontium(LontiumDevice &dev, const std::vector<uint8_t> &edid) {
-    if (!dev.checkChipId())
+void InitLontium(LontiumDevice &dev, const std::vector<uint8_t> &edid) {
+    if (!dev.CheckChipId())
         throw std::runtime_error("Chip ID mismatch");
 
-    dev.setHPD(LontiumDevice::Value::OFF);
-    dev.setEDID(edid);
-    dev.setHPD(LontiumDevice::Value::ON);
+    dev.SetHPD(LontiumDevice::Value::OFF);
+    dev.SetEDID(edid);
+    dev.SetHPD(LontiumDevice::Value::ON);
 
-    dev.rxReset();
-    dev.lvdsInit();
-    dev.lockDetect();
-    dev.lvdsSoftReset();
-    dev.colorConfig();
+    dev.RxReset();
+    dev.LvdsInit();
+    dev.LockDetect();
+    dev.LvdsSoftReset();
+    dev.ColorConfig();
 }
 
 int main(int argc, char **argv) {
     try {
-        AppConfig appConfig = parseArgs(argc, argv);
+        AppConfig appConfig = ParseArgs(argc, argv);
 
         if (edidMap.find(appConfig.edid) == edidMap.end())
             throw std::runtime_error("Unknown EDID: " + appConfig.edid);
@@ -180,13 +173,13 @@ int main(int argc, char **argv) {
 
         GpioDevice resetGpio(appConfig.resetPin);
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
-        resetGpio.setValue(GpioDevice::Value::HIGH);
+        resetGpio.SetValue(GpioDevice::Value::HIGH);
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
         for (auto &devPath: appConfig.devices) {
             std::cout << "Init device: " << devPath << " with EDID=" << appConfig.edid << "\n";
             LontiumDevice dev(devPath, appConfig.lontiumConfig);
-            initLontium(dev, edid);
+            InitLontium(dev, edid);
         }
     } catch (const std::exception &e) {
         std::cerr << "Error: " << e.what() << "\n";

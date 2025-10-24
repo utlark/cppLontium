@@ -1,14 +1,14 @@
 #pragma once
 
-#include <vector>
-#include <cstdint>
-#include <stdexcept>
-#include <fstream>
-#include <thread>
 #include <chrono>
+#include <cstdint>
+#include <fstream>
+#include <stdexcept>
+#include <thread>
+#include <vector>
 
-#include "LontiumConfig.h"
 #include "I2cDevice.h"
+#include "LontiumConfig.h"
 
 class LontiumDevice {
 public:
@@ -18,25 +18,25 @@ public:
 
     explicit LontiumDevice(const std::string &device, LontiumConfig &config, uint8_t addr = 0x32);
 
-    bool checkChipId();
+    bool CheckChipId();
 
-    void setHPD(Value value);
+    void ColorConfig();
 
-    void setEDID(const std::vector<uint8_t> &values);
+    void LockDetect();
 
-    void rxReset();
+    void LvdsInit();
 
-    void lvdsInit();
+    void LvdsSoftReset();
 
-    void lockDetect();
+    void RxReset();
 
-    void lvdsSoftReset();
+    void SetEDID(const std::vector<uint8_t> &values);
 
-    void colorConfig();
+    void SetHPD(Value value);
 
 private:
     I2cDevice _i2c;
     LontiumConfig _config;
 
-    void selectBank(uint8_t bank);
+    void SelectBank(uint8_t bank);
 };
