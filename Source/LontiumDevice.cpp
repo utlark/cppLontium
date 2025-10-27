@@ -1,3 +1,6 @@
+#include <stdexcept>
+#include <thread>
+
 #include "LontiumDevice.h"
 
 LontiumDevice::LontiumDevice(const std::string &device, LontiumConfig &config, uint8_t addr) : _i2c(device, addr), _config(config) {}

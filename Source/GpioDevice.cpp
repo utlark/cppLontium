@@ -4,45 +4,43 @@
 
 #include "GpioDevice.h"
 
-GpioDevice::GpioDevice(int pin, Value value) : _pin(pin) {
-    _basePath = "/sys/class/gpio/gpio" + std::to_string(_pin);
-
-    ExportGpio();
-    WriteFile(_basePath + "/direction", "out");
-
+GpioDevice::GpioDevice(std::string pin, Direction direction, Value value) : _pin(std::move(pin)) {
+    Export();
+    SetDirection(direction);
     SetValue(value);
 }
 
 GpioDevice::~GpioDevice() {
-    UnexportGpio();
+    Unexport();
 }
 
-void GpioDevice::WriteFile(const std::string &path, const std::string &value) {
+void GpioDevice::SetValue(Value value) {
+    WriteFile("/sys/class/gpio/gpio" + _pin + "/value", value == Value::LOW ? "0" : "1");
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+}
+
+void GpioDevice::WriteFile(const std::string &path, const std::string &data) {
     std::ofstream file(path);
     if (!file)
-        throw std::system_error(errno, std::system_category(), "Failed to open the file: " + path);
+        throw std::system_error(errno, std::system_category(), "Failed to open: " + path);
 
-    file << value;
+    file << data;
     if (!file)
         throw std::system_error(errno, std::system_category(), "Failed to write: " + path);
 }
 
-void GpioDevice::ExportGpio() {
-    if (!std::filesystem::exists(_basePath)) {
-        WriteFile("/sys/class/gpio/export", std::to_string(_pin));
-        for (int i = 0; i < 10; ++i) {
-            if (std::filesystem::exists(_basePath))
-                break;
-            std::this_thread::sleep_for(std::chrono::milliseconds(10));
-        }
-    }
+void GpioDevice::Export() {
+    if (!std::filesystem::exists("/sys/class/gpio/gpio" + _pin))
+        WriteFile("/sys/class/gpio/export", _pin);
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
 }
 
-void GpioDevice::UnexportGpio() const {
-    if (_pin >= 0 && std::filesystem::exists("/sys/class/gpio/export"))
-        WriteFile("/sys/class/gpio/unexport", std::to_string(_pin));
+void GpioDevice::SetDirection(Direction direction) {
+    WriteFile("/sys/class/gpio/gpio" + _pin + "/direction", direction == Direction::IN ? "in" : "out");
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
 }
 
-void GpioDevice::SetValue(Value value) {
-    WriteFile(_basePath + "/value", std::to_string(static_cast<int>(value)));
+void GpioDevice::Unexport() const {
+    WriteFile("/sys/class/gpio/unexport", _pin);
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
 }

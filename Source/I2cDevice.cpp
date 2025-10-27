@@ -1,12 +1,9 @@
-#include <cstdint>
 #include <fcntl.h>
 #include <linux/i2c-dev.h>
 #include <linux/i2c.h>
-#include <stdexcept>
 #include <sys/ioctl.h>
 #include <system_error>
 #include <unistd.h>
-#include <vector>
 
 #include "I2cDevice.h"
 

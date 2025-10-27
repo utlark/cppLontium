@@ -1,5 +1,9 @@
 #pragma once
 
+#include <cstdint>
+#include <string>
+#include <vector>
+
 class I2cDevice {
 public:
     I2cDevice(const std::string &device, int addr);

@@ -1,24 +1,31 @@
 #pragma once
 
+#include <string>
+
 class GpioDevice {
 public:
     enum class Value {
         LOW = 0, HIGH = 1
     };
 
-    explicit GpioDevice(int pin, Value value = Value::LOW);
+    enum class Direction {
+        IN = 0, OUT = 1
+    };
+
+    explicit GpioDevice(std::string pin, Direction direction = Direction::OUT, Value value = Value::LOW);
 
     ~GpioDevice();
 
     void SetValue(Value value);
 
 private:
-    int _pin;
-    std::string _basePath;
+    std::string _pin;
 
-    static void WriteFile(const std::string &path, const std::string &value);
+    static void WriteFile(const std::string &path, const std::string &data);
 
-    void ExportGpio();
+    void Export();
 
-    void UnexportGpio() const;
+    void SetDirection(Direction direction = Direction::IN);
+
+    void Unexport() const;
 };

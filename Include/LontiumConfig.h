@@ -1,6 +1,8 @@
 #pragma once
 
 #include <cstdint>
+#include <stdexcept>
+#include <string>
 
 /**
  * Selects the number of LVDS channels to use (single or dual link)
@@ -29,7 +31,7 @@ enum class ColorDepth : uint8_t {
 /**
  * Swaps the data channels between LVDS ports
  */
-enum class C_D_PortSwap : uint8_t {
+enum class CDPortSwap : uint8_t {
     Disabled = 0x00,    // Normal operation
     Enabled = 0x02      // Enable channel-port swapping
 };
@@ -37,7 +39,7 @@ enum class C_D_PortSwap : uint8_t {
 /**
  * Swaps red and blue color channels
  */
-enum class R_B_ColorSwap : uint8_t {
+enum class RBColorSwap : uint8_t {
     Disabled = 0x00,    // Normal RGB order
     Enabled = 0x01      // Enable red-blue color swap
 };
@@ -86,6 +88,56 @@ struct LontiumConfig {
     ChannelWidth channelWidth = ChannelWidth::Dual;
     SyncMode syncMode = SyncMode::Sync_Mode;
     ColorDepth colorDepth = ColorDepth::Bit_8;
-    C_D_PortSwap cDPortSwap = C_D_PortSwap::Disabled;
-    R_B_ColorSwap rBColorSwap = R_B_ColorSwap::Disabled;
+    CDPortSwap cDPortSwap = CDPortSwap::Disabled;
+    RBColorSwap rBColorSwap = RBColorSwap::Disabled;
+
+    static auto strToMap(const std::string &s) -> LVDS_Map {
+        if (s == "vesa") return LVDS_Map::VESA;
+        if (s == "jeida") return LVDS_Map::JEIDA;
+        throw std::invalid_argument("Invalid mapping: " + s + ". Allowed: vesa|jeida");
+    }
+
+    static auto strToOutput(const std::string &s) -> LVDS_Output {
+        if (s == "on") return LVDS_Output::Enabled;
+        if (s == "off") return LVDS_Output::Disabled;
+        throw std::invalid_argument("Invalid output: " + s + ". Allowed: on|off");
+    }
+
+    static auto strToCP(const std::string &s) -> CP_Convert_Mode {
+        if (s == "sdtv") return CP_Convert_Mode::SDTV;
+        if (s == "sdpc") return CP_Convert_Mode::SDPC;
+        if (s == "hdtv") return CP_Convert_Mode::HDTV;
+        if (s == "hdpc") return CP_Convert_Mode::HDPC;
+        throw std::invalid_argument("Invalid cp-mode: " + s + ". Allowed: sdtv|sdpc|hdtv|hdpc");
+    }
+
+    static auto strToChannel(const std::string &s) -> ChannelWidth {
+        if (s == "single") return ChannelWidth::Single;
+        if (s == "dual") return ChannelWidth::Dual;
+        throw std::invalid_argument("Invalid channel-width: " + s + ". Allowed: single|dual");
+    }
+
+    static auto strToSync(const std::string &s) -> SyncMode {
+        if (s == "de") return SyncMode::DE_Mode;
+        if (s == "sync") return SyncMode::Sync_Mode;
+        throw std::invalid_argument("Invalid sync: " + s + ". Allowed: de|sync");
+    }
+
+    static auto strToColorDepth(const std::string &s) -> ColorDepth {
+        if (s == "6") return ColorDepth::Bit_6;
+        if (s == "8") return ColorDepth::Bit_8;
+        throw std::invalid_argument("Invalid color-depth: " + s + ". Allowed: 6|8");
+    }
+
+    static auto strToCD(const std::string &s) -> CDPortSwap {
+        if (s == "on") return CDPortSwap::Enabled;
+        if (s == "off") return CDPortSwap::Disabled;
+        throw std::invalid_argument("Invalid cd-swap: " + s + ". Allowed: on|off");
+    }
+
+    static auto strToRB(const std::string &s) -> RBColorSwap {
+        if (s == "on") return RBColorSwap::Enabled;
+        if (s == "off") return RBColorSwap::Disabled;
+        throw std::invalid_argument("Invalid rb-swap: " + s + ". Allowed: on|off");
+    }
 };

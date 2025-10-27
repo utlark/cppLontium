@@ -1,10 +1,7 @@
 #pragma once
 
-#include <chrono>
 #include <cstdint>
-#include <fstream>
-#include <stdexcept>
-#include <thread>
+#include <string>
 #include <vector>
 
 #include "I2cDevice.h"

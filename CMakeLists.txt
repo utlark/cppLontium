@@ -49,7 +49,7 @@ else ()
     target_link_options(${TARGET_NAME} PRIVATE -Os -Wl,--strip-all)
 endif ()
 
-if (TRUE)
+if (FALSE)
     set(ARM_TOOLCHAIN_PATH "${CMAKE_CURRENT_LIST_DIR}/Toolchains/aarch64-none-linux-gnu")
 
     set(CMAKE_C_COMPILER ${ARM_TOOLCHAIN_PATH}/bin/aarch64-none-linux-gnu-gcc)

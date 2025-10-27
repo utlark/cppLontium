@@ -1,4 +1,7 @@
+#include <cstdint>
 #include <iostream>
+#include <string>
+#include <vector>
 
 #include "GpioDevice.h"
 #include "LontiumConfig.h"
@@ -7,7 +10,7 @@
 #include "cxxopts.hpp"
 
 struct AppConfig {
-    int resetPin = 154;
+    std::string resetPin = "154";
     std::string edid = "1920x1080";
     std::vector<std::string> devices;
 
@@ -55,94 +58,57 @@ const std::map<std::string, std::vector<uint8_t>> edidMap = {
 
 AppConfig ParseArgs(int argc, char **argv) {
     cxxopts::Options options("lontium-config", "Lontium configurator utility\n");
+    options.set_width(100);
 
     options.add_options()
-            ("reset-pin", "GPIO pin for reset", cxxopts::value<int>()->default_value("154"))
-            ("edid", "EDID name (1920x1080/1024x768)", cxxopts::value<std::string>()->default_value("1920x1080"))
-            ("dev", "I2C device path, can repeat", cxxopts::value<std::vector<std::string>>())
-            ("mapping", "LVDS mapping (vesa/jeida)", cxxopts::value<std::string>()->default_value("vesa"))
-            ("color-depth", "Color depth (6/8)", cxxopts::value<int>()->default_value("8"))
-            ("output", "LVDS output enable (on/off)", cxxopts::value<std::string>()->default_value("on"))
-            ("cp-mode", "Conversion mode (sdtv/sdpc/hdtv/hdpc)", cxxopts::value<std::string>()->default_value("hdtv"))
-            ("channel-width", "LVDS channel width (single/dual)", cxxopts::value<std::string>()->default_value("dual"))
-            ("sync", "Sync mode (de/sync)", cxxopts::value<std::string>()->default_value("sync"))
-            ("cd-swap", "Channel-port swap (on/off)", cxxopts::value<std::string>()->default_value("off"))
-            ("rb-swap", "Red-blue swap (on/off)", cxxopts::value<std::string>()->default_value("off"))
-            ("help", "Print help");
+            ("h,help", "Print usage")
+            ("reset-pin", "GPIO pin for reset", cxxopts::value<std::string>()->default_value("154"))
+            ("edid", "EDID name: 1920x1080|1024x768", cxxopts::value<std::string>()->default_value("1920x1080"))
+            ("dev", "I2C device path, multiple allowed", cxxopts::value<std::vector<std::string>>())
+            ("mapping", "LVDS mapping: vesa|jeida", cxxopts::value<std::string>()->default_value("vesa"))
+            ("color-depth", "Color depth: 6|8", cxxopts::value<int>()->default_value("8"))
+            ("output", "LVDS output enable: on|off", cxxopts::value<std::string>()->default_value("on"))
+            ("cp-mode", "Conversion mode: sdtv|sdpc|hdtv|hdpc", cxxopts::value<std::string>()->default_value("hdtv"))
+            ("channel-width", "LVDS channel width: single|dual", cxxopts::value<std::string>()->default_value("dual"))
+            ("sync", "Sync mode: de|sync", cxxopts::value<std::string>()->default_value("sync"))
+            ("cd-swap", "Channel-port swap: on|off", cxxopts::value<std::string>()->default_value("off"))
+            ("rb-swap", "Red-blue swap: on|off", cxxopts::value<std::string>()->default_value("off"));
 
-    auto result = options.parse(argc, argv);
-    if (result.count("help")) {
-        std::cout << options.help() << "\n";
-        std::exit(0);
+    auto parse = options.parse(argc, argv);
+
+    if (parse.count("help")) {
+        std::cout << options.help() << std::endl;
+        std::cout << std::endl << "Example: " << argv[0] << " --dev=/dev/i2c-1 --devt=/dev/i2c-2" << std::endl;
+        std::exit(1);
     }
 
-    AppConfig appConfig;
-    appConfig.resetPin = result["reset-pin"].as<int>();
-    appConfig.edid = result["edid"].as<std::string>();
-    if (result.count("dev"))
-        appConfig.devices = result["dev"].as<std::vector<std::string>>();
+    AppConfig config;
+    config.resetPin = parse["reset-pin"].as<std::string>();
+    if (std::stoi(config.resetPin) < 0)
+        throw std::invalid_argument("Invalid reset pin: " + config.resetPin + ". Allowed: integer > 0");
 
-    auto strToMap = [](const std::string &s) {
-        if (s == "vesa") return LVDS_Map::VESA;
-        if (s == "jeida") return LVDS_Map::JEIDA;
-        throw std::invalid_argument("Invalid mapping: " + s + ". Allowed: vesa, jeida");
-    };
+    config.edid = parse["edid"].as<std::string>();
+    if (edidMap.find(config.edid) == edidMap.end())
+        throw std::invalid_argument("Invalid edid: " + config.edid + ". Allowed: 1920x1080|1024x768");
 
-    auto strToOutput = [](const std::string &s) {
-        if (s == "on") return LVDS_Output::Enabled;
-        if (s == "off") return LVDS_Output::Disabled;
-        throw std::invalid_argument("Invalid output: " + s + ". Allowed: on, off");
-    };
+    if (!parse.count("dev")) {
+        std::cerr << "Error: '--dev' is required" << std::endl;
+        std::cout << options.help() << std::endl;
+        std::exit(1);
+    }
+    if (parse.count("dev"))
+        config.devices = parse["dev"].as<std::vector<std::string>>();
 
-    auto strToCP = [](const std::string &s) {
-        if (s == "sdtv") return CP_Convert_Mode::SDTV;
-        if (s == "sdpc") return CP_Convert_Mode::SDPC;
-        if (s == "hdtv") return CP_Convert_Mode::HDTV;
-        if (s == "hdpc") return CP_Convert_Mode::HDPC;
-        throw std::invalid_argument("Invalid cp-mode: " + s + ". Allowed: sdtv, sdpc, hdtv, hdpc");
-    };
+    config.lontiumConfig.lvdsMap = LontiumConfig::strToMap(parse["mapping"].as<std::string>());
+    config.lontiumConfig.lvdsOutput = LontiumConfig::strToOutput(parse["output"].as<std::string>());
+    config.lontiumConfig.cpConvertMode = LontiumConfig::strToCP(parse["cp-mode"].as<std::string>());
+    config.lontiumConfig.channelWidth = LontiumConfig::strToChannel(parse["channel-width"].as<std::string>());
+    config.lontiumConfig.syncMode = LontiumConfig::strToSync(parse["sync"].as<std::string>());
+    config.lontiumConfig.colorDepth = LontiumConfig::strToColorDepth(parse["color-depth"].as<std::string>());
+    config.lontiumConfig.cDPortSwap = LontiumConfig::strToCD(parse["cd-swap"].as<std::string>());
+    config.lontiumConfig.rBColorSwap = LontiumConfig::strToRB(parse["rb-swap"].as<std::string>());
 
-    auto strToChannel = [](const std::string &s) {
-        if (s == "single") return ChannelWidth::Single;
-        if (s == "dual") return ChannelWidth::Dual;
-        throw std::invalid_argument("Invalid channel-width: " + s + ". Allowed: single, dual");
-    };
-
-    auto strToSync = [](const std::string &s) {
-        if (s == "de") return SyncMode::DE_Mode;
-        if (s == "sync") return SyncMode::Sync_Mode;
-        throw std::invalid_argument("Invalid sync: " + s + ". Allowed: de, sync");
-    };
-
-    auto strToCD = [](const std::string &s) {
-        if (s == "on") return C_D_PortSwap::Enabled;
-        if (s == "off") return C_D_PortSwap::Disabled;
-        throw std::invalid_argument("Invalid cd-swap: " + s + ". Allowed: on, off");
-    };
-
-    auto strToRB = [](const std::string &s) {
-        if (s == "on") return R_B_ColorSwap::Enabled;
-        if (s == "off") return R_B_ColorSwap::Disabled;
-        throw std::invalid_argument("Invalid rb-swap: " + s + ". Allowed: on, off");
-    };
-
-    appConfig.lontiumConfig.lvdsMap = strToMap(result["mapping"].as<std::string>());
-    appConfig.lontiumConfig.lvdsOutput = strToOutput(result["output"].as<std::string>());
-    appConfig.lontiumConfig.cpConvertMode = strToCP(result["cp-mode"].as<std::string>());
-    appConfig.lontiumConfig.channelWidth = strToChannel(result["channel-width"].as<std::string>());
-    appConfig.lontiumConfig.syncMode = strToSync(result["sync"].as<std::string>());
-    appConfig.lontiumConfig.cDPortSwap = strToCD(result["cd-swap"].as<std::string>());
-    appConfig.lontiumConfig.rBColorSwap = strToRB(result["rb-swap"].as<std::string>());
-
-    int depth = result["color-depth"].as<int>();
-    if (depth == 6)
-        appConfig.lontiumConfig.colorDepth = ColorDepth::Bit_6;
-    else if (depth == 8)
-        appConfig.lontiumConfig.colorDepth = ColorDepth::Bit_8;
-    else
-        throw std::invalid_argument("Invalid color-depth: " + std::to_string(depth) + ". Allowed: 6, 8");
-
-    return appConfig;
+    return config;
 }
 
 void InitLontium(LontiumDevice &dev, const std::vector<uint8_t> &edid) {
@@ -164,25 +130,17 @@ int main(int argc, char **argv) {
     try {
         AppConfig appConfig = ParseArgs(argc, argv);
 
-        if (edidMap.find(appConfig.edid) == edidMap.end())
-            throw std::runtime_error("Unknown EDID: " + appConfig.edid);
-        auto &edid = edidMap.at(appConfig.edid);
-
-        if (appConfig.devices.empty())
-            throw std::runtime_error("No devices specified (use --dev)");
-
         GpioDevice resetGpio(appConfig.resetPin);
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
         resetGpio.SetValue(GpioDevice::Value::HIGH);
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
+        auto &edid = edidMap.at(appConfig.edid);
         for (auto &devPath: appConfig.devices) {
-            std::cout << "Init device: " << devPath << " with EDID=" << appConfig.edid << "\n";
+            std::cout << "Init device: " << devPath << " with EDID=" << appConfig.edid << std::endl;
             LontiumDevice dev(devPath, appConfig.lontiumConfig);
             InitLontium(dev, edid);
         }
     } catch (const std::exception &e) {
-        std::cerr << "Error: " << e.what() << "\n";
+        std::cerr << "Error: " << e.what() << std::endl;
         return 1;
     }
     return 0;
