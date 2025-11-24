@@ -66,7 +66,7 @@ AppConfig ParseArgs(int argc, char **argv) {
             ("edid", "EDID name: 1920x1080|1024x768", cxxopts::value<std::string>()->default_value("1920x1080"))
             ("dev", "I2C device path, multiple allowed", cxxopts::value<std::vector<std::string>>())
             ("mapping", "LVDS mapping: vesa|jeida", cxxopts::value<std::string>()->default_value("vesa"))
-            ("color-depth", "Color depth: 6|8", cxxopts::value<int>()->default_value("8"))
+            ("color-depth", "Color depth: 6|8", cxxopts::value<std::string>()->default_value("8"))
             ("output", "LVDS output enable: on|off", cxxopts::value<std::string>()->default_value("on"))
             ("cp-mode", "Conversion mode: sdtv|sdpc|hdtv|hdpc", cxxopts::value<std::string>()->default_value("hdtv"))
             ("channel-width", "LVDS channel width: single|dual", cxxopts::value<std::string>()->default_value("dual"))

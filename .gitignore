@@ -1,7 +1,9 @@
 /cmake-build-*/
 /Toolchains/
+/.PVS-Studio/
 ~$*
 ~*.tmp
 .~lock*
 *.drawio.bkp
 *.state.json
+.cache
