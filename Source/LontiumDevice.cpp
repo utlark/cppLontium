@@ -3,52 +3,62 @@
 
 #include "LontiumDevice.h"
 
-LontiumDevice::LontiumDevice(const std::string &device, LontiumConfig &config, uint8_t addr) : _i2c(device, addr), _config(config) {}
+LontiumDevice::LontiumDevice (const std::string &device, const LontiumConfig &config, const uint8_t addr) : _i2c(device, addr), _config(config) { }
 
-void LontiumDevice::SelectBank(uint8_t bank) {
+void LontiumDevice::SelectBank (const uint8_t bank) const
+{
     _i2c.WriteReg(0xFF, bank);
 }
 
-bool LontiumDevice::CheckChipId() {
+bool LontiumDevice::CheckChipId () const
+{
     SelectBank(0x60);
 
     std::vector<uint8_t> idBytes = _i2c.ReadRegs(0x00, 3);
-    if ((idBytes[0] == 0x16) && idBytes[1] == 0x04)
+    if (idBytes[0] == 0x16 && idBytes[1] == 0x04)
         return true;
-    else
-        return false;
+    return false;
 }
 
-void LontiumDevice::ColorConfig() {
+void LontiumDevice::ColorConfig ()
+{
     SelectBank(0x80);
 
-    if (((_i2c.ReadReg(0x71)) & 0x60) != 0x00) {
+    if ((_i2c.ReadReg(0x71) & 0x60) != 0x00)
+    {
         SelectBank(0x60);
         _i2c.WriteReg(0x07, 0x8c); // YCbCr to RGB ClK enable
 
         SelectBank(0x80);
-        if ((_i2c.ReadReg(0x71) & 0x60) == 0x20) {
+        if ((_i2c.ReadReg(0x71) & 0x60) == 0x20)
+        {
             SelectBank(0x60);
             _i2c.WriteReg(0x52, 0x01); // YUV422 to YUV444 enable
-        } else {
+        }
+        else
+        {
             SelectBank(0x60);
             _i2c.WriteReg(0x52, 0x00); // YUV422 to YUV444 disable
         }
 
         _i2c.WriteReg(0x53, 0x40 | static_cast<uint8_t>(_config.cpConvertMode));
-    } else {
+    }
+    else
+    {
         SelectBank(0x60);
         _i2c.WriteReg(0x07, 0x80);
         _i2c.WriteReg(0x53, 0x00);
     }
 }
 
-void LontiumDevice::LockDetect() {
-    const auto timeout = std::chrono::seconds(5);
+void LontiumDevice::LockDetect () const
+{
+    const auto timeout   = std::chrono::seconds(5);
     const auto startTime = std::chrono::steady_clock::now();
 
     SelectBank(0x80);
-    while ((_i2c.ReadReg(0x87) & 0x20) == 0x00) {
+    while ((_i2c.ReadReg(0x87) & 0x20) == 0x00)
+    {
         if (std::chrono::steady_clock::now() - startTime >= timeout)
             throw std::runtime_error("LVDS PLL lock det failed");
 
@@ -64,9 +74,10 @@ void LontiumDevice::LockDetect() {
     }
 }
 
-void LontiumDevice::LvdsInit() {
+void LontiumDevice::LvdsInit ()
+{
     SelectBank(0x80);
-    _i2c.WriteReg(0x2c, (_i2c.ReadReg(0x2C) | 0x30));
+    _i2c.WriteReg(0x2c, _i2c.ReadReg(0x2C) | 0x30);
 
     SelectBank(0x60);
     _i2c.WriteReg(0x80, 0x08);
@@ -79,8 +90,10 @@ void LontiumDevice::LvdsInit() {
         std::this_thread::sleep_for(std::chrono::milliseconds(50));
 
     SelectBank(0x60);
-    _i2c.WriteReg(0x59, static_cast<uint8_t>(_config.lvdsMap) | static_cast<uint8_t>(_config.lvdsOutput) | static_cast<uint8_t>(_config.syncMode) |
-                        static_cast<uint8_t>(_config.colorDepth) | static_cast<uint8_t>(_config.cDPortSwap) | static_cast<uint8_t>(_config.rBColorSwap));
+    _i2c.WriteReg(
+        0x59, static_cast<uint8_t>(_config.lvdsMap) | static_cast<uint8_t>(_config.lvdsOutput) | static_cast<uint8_t>(_config.syncMode) | static_cast<uint8_t>(_config.colorDepth) |
+                  static_cast<uint8_t>(_config.cDPortSwap) | static_cast<uint8_t>(_config.rBColorSwap)
+    );
     if (_config.colorDepth == ColorDepth::Bit_8)
         _i2c.WriteReg(0x5f, 0x00);
     else
@@ -114,21 +127,23 @@ void LontiumDevice::LvdsInit() {
     _i2c.WriteReg(0x04, 0xe7);
 }
 
-void LontiumDevice::LvdsSoftReset() {
+void LontiumDevice::LvdsSoftReset () const
+{
     SelectBank(0x60);
 
     uint8_t reg = _i2c.ReadReg(0x0E);
-    _i2c.WriteReg(0x0E, reg & (~0x02));
+    _i2c.WriteReg(0x0E, reg & ~0x02);
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
     _i2c.WriteReg(0x0E, reg | 0x02);
 
     reg = _i2c.ReadReg(0x0D);
-    _i2c.WriteReg(0x0D, reg & (~0x04));
+    _i2c.WriteReg(0x0D, reg & ~0x04);
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
     _i2c.WriteReg(0x0D, reg | 0x04);
 }
 
-void LontiumDevice::RxReset() {
+void LontiumDevice::RxReset () const
+{
     SelectBank(0x60);
 
     _i2c.WriteReg(0x0E, 0xBF);
@@ -151,7 +166,8 @@ void LontiumDevice::RxReset() {
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
 }
 
-void LontiumDevice::SetEDID(const std::vector<uint8_t> &values) {
+void LontiumDevice::SetEDID (const std::vector<uint8_t> &values) const
+{
     SelectBank(0x80);
 
     _i2c.WriteReg(0x8E, 0x07);
@@ -162,11 +178,12 @@ void LontiumDevice::SetEDID(const std::vector<uint8_t> &values) {
     _i2c.WriteReg(0x8E, 0x02);
 }
 
-void LontiumDevice::SetHPD(Value value) {
+void LontiumDevice::SetHPD (const Value value) const
+{
     SelectBank(0x80);
 
     if (Value::ON == value)
-        _i2c.WriteReg(0x06, (_i2c.ReadReg(0x06) | 0x08));
+        _i2c.WriteReg(0x06, _i2c.ReadReg(0x06) | 0x08);
     else
-        _i2c.WriteReg(0x06, (_i2c.ReadReg(0x06) & 0xF7));
+        _i2c.WriteReg(0x06, _i2c.ReadReg(0x06) & 0xF7);
 }

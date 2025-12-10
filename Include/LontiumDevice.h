@@ -7,33 +7,36 @@
 #include "I2cDevice.h"
 #include "LontiumConfig.h"
 
-class LontiumDevice {
+class LontiumDevice
+{
 public:
-    enum class Value {
-        OFF = 0, ON = 1
+    enum class Value
+    {
+        OFF = 0,
+        ON  = 1
     };
 
-    explicit LontiumDevice(const std::string &device, LontiumConfig &config, uint8_t addr = 0x32);
+    explicit LontiumDevice (const std::string &device, const LontiumConfig &config, uint8_t addr = 0x32);
 
-    bool CheckChipId();
+    [[nodiscard]] bool CheckChipId () const;
 
-    void ColorConfig();
+    void ColorConfig ();
 
-    void LockDetect();
+    void LockDetect () const;
 
-    void LvdsInit();
+    void LvdsInit ();
 
-    void LvdsSoftReset();
+    void LvdsSoftReset () const;
 
-    void RxReset();
+    void RxReset () const;
 
-    void SetEDID(const std::vector<uint8_t> &values);
+    void SetEDID (const std::vector<uint8_t> &values) const;
 
-    void SetHPD(Value value);
+    void SetHPD (Value value) const;
 
 private:
-    I2cDevice _i2c;
+    I2cDevice     _i2c;
     LontiumConfig _config;
 
-    void SelectBank(uint8_t bank);
+    void SelectBank (uint8_t bank) const;
 };
