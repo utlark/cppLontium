@@ -1,11 +1,11 @@
 #pragma once
 
-#include <cstdint>
 #include <string>
 #include <vector>
 
 #include "I2cDevice.h"
 #include "LontiumConfig.h"
+#include "VideoInfo.h"
 
 class LontiumDevice
 {
@@ -17,6 +17,8 @@ public:
     };
 
     explicit LontiumDevice (const std::string &device, const LontiumConfig &config, uint8_t addr = 0x32);
+
+    [[nodiscard]] VideoInfo GetVideoInfo () const;
 
     [[nodiscard]] bool CheckChipId () const;
 

@@ -10,12 +10,36 @@ void LontiumDevice::SelectBank (const uint8_t bank) const
     _i2c.WriteReg(0xFF, bank);
 }
 
+VideoInfo LontiumDevice::GetVideoInfo () const
+{
+    VideoInfo videoInfo = {};
+
+    SelectBank(0x60);
+    videoInfo.hActive = _i2c.ReadReg(0x20) << 8 | _i2c.ReadReg(0x21);
+    videoInfo.vActive = _i2c.ReadReg(0x22) << 8 | _i2c.ReadReg(0x23);
+
+    videoInfo.hTotal = _i2c.ReadReg(0x1C) << 8 | _i2c.ReadReg(0x1D);
+    videoInfo.vTotal = _i2c.ReadReg(0x1E) << 8 | _i2c.ReadReg(0x1F);
+
+    videoInfo.vFrontPorch = _i2c.ReadReg(0x17);
+    videoInfo.vBackPorch  = _i2c.ReadReg(0x16);
+    videoInfo.vSyncWidth  = _i2c.ReadReg(0x13);
+
+    videoInfo.hFrontPorch = _i2c.ReadReg(0x1A) << 8 | _i2c.ReadReg(0x1B);
+    videoInfo.hBackPorch  = _i2c.ReadReg(0x18) << 8 | _i2c.ReadReg(0x15);
+    videoInfo.hSyncWidth  = _i2c.ReadReg(0x14) << 8 | _i2c.ReadReg(0x19);
+
+    SelectBank(0x80);
+    videoInfo.clockFreq = (_i2c.ReadReg(0x44) & 0x07) << 16 | _i2c.ReadReg(0x45) << 8 | _i2c.ReadReg(0x46);
+
+    return videoInfo;
+}
+
 bool LontiumDevice::CheckChipId () const
 {
     SelectBank(0x60);
 
-    std::vector<uint8_t> idBytes = _i2c.ReadRegs(0x00, 3);
-    if (idBytes[0] == 0x16 && idBytes[1] == 0x04)
+    if (const std::vector<uint8_t> idBytes = _i2c.ReadRegs(0x00, 3); idBytes[0] == 0x16 && idBytes[1] == 0x04)
         return true;
     return false;
 }

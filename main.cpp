@@ -1,4 +1,3 @@
-#include <cstdint>
 #include <iostream>
 #include <string>
 #include <vector>
@@ -9,7 +8,16 @@
 
 #include "cxxopts.hpp"
 
-struct AppConfig {
+enum class WorkMode : uint8_t
+{
+    Init = 0x00,
+    Info = 0x01
+};
+
+struct AppConfig
+{
+    WorkMode workMode = WorkMode::Init;
+
     std::string              resetPin = "154";
     std::string              edid     = "1920x1080";
     std::vector<std::string> devices;
@@ -65,6 +73,7 @@ AppConfig ParseArgs (const int argc, char **argv)
 
     options.add_options()
             ("h,help", "Print usage")
+            ("i,info", "Print video info")
             ("reset-pin", "GPIO pin for reset", cxxopts::value<std::string>()->default_value("154"))
             ("edid", "EDID name: 1920x1080|1024x768", cxxopts::value<std::string>()->default_value("1920x1080"))
             ("dev", "I2C device path, multiple allowed", cxxopts::value<std::vector<std::string>>())
@@ -77,8 +86,7 @@ AppConfig ParseArgs (const int argc, char **argv)
             ("cd-swap", "Channel-port swap: on|off", cxxopts::value<std::string>()->default_value("off"))
             ("rb-swap", "Red-blue swap: on|off", cxxopts::value<std::string>()->default_value("off"));
 
-    auto parse = options.parse(argc, argv);
-
+    const auto parse = options.parse(argc, argv);
     if (parse.count("help"))
     {
         std::cout << options.help() << std::endl;
@@ -87,14 +95,6 @@ AppConfig ParseArgs (const int argc, char **argv)
     }
 
     AppConfig config;
-    config.resetPin = parse["reset-pin"].as<std::string>();
-    if (std::stoi(config.resetPin) < 0)
-        throw std::invalid_argument("Invalid reset pin: " + config.resetPin + ". Allowed: integer > 0");
-
-    config.edid = parse["edid"].as<std::string>();
-    if (edidMap.find(config.edid) == edidMap.end())
-        throw std::invalid_argument("Invalid edid: " + config.edid + ". Allowed: 1920x1080|1024x768");
-
     if (!parse.count("dev"))
     {
         std::cerr << "Error: '--dev' is required" << std::endl;
@@ -103,6 +103,20 @@ AppConfig ParseArgs (const int argc, char **argv)
     }
     if (parse.count("dev"))
         config.devices = parse["dev"].as<std::vector<std::string>>();
+
+    if (parse.count("info"))
+    {
+        config.workMode = WorkMode::Info;
+        return config;
+    }
+
+    config.resetPin = parse["reset-pin"].as<std::string>();
+    if (std::stoi(config.resetPin) < 0)
+        throw std::invalid_argument("Invalid reset pin: " + config.resetPin + ". Allowed: integer > 0");
+
+    config.edid = parse["edid"].as<std::string>();
+    if (edidMap.find(config.edid) == edidMap.end())
+        throw std::invalid_argument("Invalid edid: " + config.edid + ". Allowed: 1920x1080|1024x768");
 
     config.lontiumConfig.lvdsMap       = LontiumConfig::strToMap(parse["mapping"].as<std::string>());
     config.lontiumConfig.lvdsOutput    = LontiumConfig::strToOutput(parse["output"].as<std::string>());
@@ -136,16 +150,40 @@ int main (const int argc, char **argv)
 {
     try
     {
-        auto appConfig = ParseArgs(argc, argv);
+        if (const auto appConfig = ParseArgs(argc, argv); appConfig.workMode == WorkMode::Init)
+        {
+            const GpioDevice resetGpio(appConfig.resetPin);
+            resetGpio.SetValue(GpioDevice::Value::HIGH);
 
-        const GpioDevice resetGpio(appConfig.resetPin);
-        resetGpio.SetValue(GpioDevice::Value::HIGH);
+            auto &edid = edidMap.at(appConfig.edid);
+            for (auto &devPath : appConfig.devices)
+            {
+                std::cout << "Init device: " << devPath << " with EDID=" << appConfig.edid << std::endl;
+                LontiumDevice dev(devPath, appConfig.lontiumConfig);
+                InitLontium(dev, edid);
+            }
+        }
+        else
+        {
+            for (auto &devPath : appConfig.devices)
+            {
+                std::cout << "Get video info for device: " << devPath << std::endl;
+                LontiumDevice dev(devPath, appConfig.lontiumConfig);
 
-        auto &edid = edidMap.at(appConfig.edid);
-        for (auto &devPath : appConfig.devices)
-            std::cout << "Init device: " << devPath << " with EDID=" << appConfig.edid << std::endl;
-            LontiumDevice dev(devPath, appConfig.lontiumConfig);
-            InitLontium(dev, edid);
+                const auto videoInfo = dev.GetVideoInfo();
+                std::cout << "VideoInfo:" << std::endl;
+                std::cout << "  vActive      = " << videoInfo.vActive << std::endl;
+                std::cout << "  hActive      = " << videoInfo.hActive << std::endl;
+                std::cout << "  vTotal       = " << videoInfo.vTotal << std::endl;
+                std::cout << "  hTotal       = " << videoInfo.hTotal << std::endl;
+                std::cout << "  vFrontPorch  = " << videoInfo.vFrontPorch << std::endl;
+                std::cout << "  vBackPorch   = " << videoInfo.vBackPorch << std::endl;
+                std::cout << "  vSyncWidth   = " << videoInfo.vSyncWidth << std::endl;
+                std::cout << "  hFrontPorch  = " << videoInfo.hFrontPorch << std::endl;
+                std::cout << "  hBackPorch   = " << videoInfo.hBackPorch << std::endl;
+                std::cout << "  hSyncWidth   = " << videoInfo.hSyncWidth << std::endl;
+                std::cout << "  clockFreq    = " << videoInfo.clockFreq << " kHz" << std::endl;
+            }
         }
     }
     catch (const std::exception &e)
